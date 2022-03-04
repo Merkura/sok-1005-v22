@@ -1,0 +1,48 @@
+library(tidyverse)
+library(rvest)
+library(rlist)
+library(purrr)
+
+#Henter ulike timelister
+sok1005 <-"https://timeplan.uit.no/emne_timeplan.php?sem=22v&module%5B%5D=SOK-1005-1&week=1-20&View=list"
+sok1006 <-"https://timeplan.uit.no/emne_timeplan.php?sem=22v&module%5B%5D=SOK-1006-1&week=1-20&View=list"
+sok1016 <- "https://timeplan.uit.no/emne_timeplan.php?sem=22v&module%5B%5D=SOK-1016-1&week=1-20&View=list"
+
+url_list <- list(sok1005, sok1006, sok1016)
+
+#skraper url og stacker liste til tabell
+
+skrap <- function(url) {
+  link <- read_html(url)
+  
+  table <- html_nodes(link, 'table')
+  table <- html_table(table, fill=TRUE)
+  
+  dframe <- list.stack(table)
+  
+  colnames(dframe) <- dframe[1,]
+  
+  dframe <- dframe %>% filter(!Dato=="Dato")
+  
+  dframe <- dframe %>% separate(Dato,
+                                into = c("Dag", "Dato"),
+                                sep = "(?<=[A-Za-z])(?=[0-9])")
+  
+  dframe$Dato <- as.Date(dframe$Dato, format="%d.%m.%Y")
+  
+  dframe$Uke <- strftime(dframe$Dato, format = "%V")
+  
+  dframe <- dframe %>% select(Dag,Dato,Uke,Tid,Rom,Emnekode,Lærer)
+  
+  return(dframe)
+  
+}
+
+#Bruker map og fjerner NA og binder sammen
+ 
+timeplan <-  map(url_list,skrap)
+timeplan <- bind_rows(timeplan)
+timeplan <- na.omit(timeplan)
+
+
+timeplan
