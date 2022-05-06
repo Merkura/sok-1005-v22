@@ -1,0 +1,20 @@
+def
+player_strategy(n_battalions,n_fields):
+    #definerer matrisen 
+    battalions=np.zeros(n_fields,dtype=int)
+   
+    #tilderes betaljoner 
+    battalions[0]=2
+    battalions[1]=23
+    battalions[2]=25
+    battalions[3]=25
+    battalions[4]=23
+    battalions[5]=2
+   
+   
+   
+    #alle bataljonere brukes
+    battalions=battalions[np.random.rand(n_fields).argsort()]
+    assert sum(battalions)==n_battalions
+   
+    return battalions
