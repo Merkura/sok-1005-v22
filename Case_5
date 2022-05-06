@@ -1,0 +1,147 @@
+from bs4 import BeautifulSoup
+import requests
+import pandas as pd
+import lxml
+from matplotlib import pyplot as plt
+import numpy as np
+from statsmodels.regression.linear_model import OLS
+
+
+
+def fetch_html_tables(url):
+    "Returns a list of tables in the html of url"
+    page = requests.get(url)
+    bs=BeautifulSoup(page.content)
+    tables=bs.find_all('table')
+    return tables
+
+
+tables=fetch_html_tables('https://www.motor.no/aktuelt/motors-store-vintertest-av-rekkevidde-pa-elbiler/217132')
+table_html=tables[0]
+
+
+print(str(table_html)[:1000])
+
+
+def html_to_table(html):
+    "Returns the table defined in html as a list"
+    
+    table=[]
+    
+    for row in html.find_all('tr'):
+        r=[]
+    
+        cells=row.find_all('td')
+
+    
+        if len(cells)==0:
+            cells=row.find_all('th')
+
+        #iterate over cells:
+        for cell in cells:
+            cell=format(cell)
+            r.append(cell)
+
+        
+        table.append(r)
+    return table
+
+
+
+def format(cell):
+    "Returns a string after converting bs4 object cell to clean text"
+    if cell.content is None:
+        s=cell.text
+    elif len(cell.content)==0:
+        return ''
+    else:
+        s=' '.join([str(c) for c in cell.content])
+
+
+
+    s=s.replace('\xa0','')
+    s=s.replace('\n','')
+    return s
+
+
+
+table=html_to_table(table_html)
+
+
+print(str(table)[:1000])
+
+
+';'.join(table[0])
+
+
+
+def save_data(file_name,table):
+    "Saves table to file_name"
+    f=open(file_name,'w')
+    for row in table:
+        f.write(';'.join(row)+'\n')
+    f.close()
+
+save_data('rekkeviddetallene.csv',table)
+
+
+
+pd.read_csv('rekkeviddetallene.csv', delimiter=';', encoding='latin1')
+
+
+
+def scrape(url, file_name):
+    table=[]
+    tables=fetch_html_tables(url)
+
+    for tbl in tables:
+
+        table.extend(html_to_table(tbl))
+
+    save_data(file_name,table)
+    return table
+
+
+
+url='https://www.motor.no/aktuelt/motors-store-vintertest-av-rekkevidde-pa-elbiler/217132'
+file_name='schedule.csv'
+
+table=scrape(url,file_name)
+
+s='\n'.join(['\t'.join(row) for row in table])
+
+
+
+print(str(s)[:1000])
+
+
+g = pd.read_csv('rekkeviddetallene.csv', delimiter=';', encoding='latin1')
+g = g[:11]
+g
+
+
+
+g.drop(g.index[0], inplace=True)
+
+
+
+g.dtypes
+
+
+
+
+
+x=[497,645]
+y=[406,513]
+plt.plot(x,y)
+plt.xlabel('X-WLTP-tall')
+plt.ylabel('Y-STOPP')
+plt.title("Rekkevidde")
+plt.show()
+
+
+res=OLS(y,x).fit()
+
+
+print(res.summary())
+
