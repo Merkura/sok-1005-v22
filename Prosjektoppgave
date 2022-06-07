@@ -188,3 +188,16 @@ Price_per_items <- all_stores_month %>%
                              ifelse(Price > 10, ">10$", "")))))))) %>% 
   summarise(Sold, Price, Sales, Profit)
 Price_per_items
+
+
+#Figur 2 - Plotter salg per prisgrupper
+figure_2 <-
+  Price_per_items %>% 
+  ggplot(aes(x=Price_per_items, y = Sold))+
+  geom_bar(stat= "identity", fill = "blue") +
+  geom_text(aes(label=Profit), vjust= 100, size=3)+
+  labs(title = "Salgsoversikt per prisgruppe, 30 dager", x = "Prisgruppe solgt $", y = "Antall solgt")+
+  theme_bw()
+figure_2
+
+
