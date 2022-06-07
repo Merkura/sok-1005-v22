@@ -1,0 +1,190 @@
+library(readr)
+library(dplyr)
+library(ggplot2)
+
+#Kanditat nr - 78 & 41
+
+getwd()
+
+#Leser inn data
+App_attributes <- read.csv("AppWichStoreAttributes.csv")
+County_crime <- read.csv("county_crime.csv")
+County_demographic <- read.csv("county_employment.csv")
+Weekly_sales_10stores <- read.csv("WEEKLY_SALES_10STORES.csv")
+Weekly_weather <- read.csv("WEEKLY_WEATHER.csv")
+County_employment <- read.csv("county_employment.csv")
+
+
+
+# Joining App_Attributes, County_crime, County_demographic, County_employment
+df <- left_join(App_attributes, County_crime,
+                by = c("Store_County"="County_Name"))%>% 
+  left_join(County_demographic, by =c("Store_County"="County_Name"))%>%
+  left_join(County_employment, by =c("Store_County"="County_Name")) %>%
+  left_join(Weekly_sales_10stores, by =c("Store_Num" = "Store_num"))
+
+#Lager ny kolonne med dato
+Weekly_weather1 <- Weekly_weather %>% rename(Date = Weather_Date)
+
+Complete_tabel <- df %>% left_join(Weekly_weather1, 
+                                   by =c("Date"="Date","Store_Weather_Station"="Weather_Station"))
+
+
+###Oppgave 2
+
+# Filtrerer Power City Freestand = store_number 2
+store2 <- Complete_tabel %>% 
+  filter( Store_Num =="2")
+
+#Filtrerer ut uke 1, og 2 for Power City Freestand
+w1_store2 <- store2[c(1:174),]
+
+w2_store2 <- store2[c(174:373),]
+
+#Uke 1 mest solgt
+W1_sold <- w1_store2 %>%
+  group_by(INV_NUMBER, Description, Price, Sold, Cost, Profit, Sales) %>%
+  summarise(Sold = sum(Sold)) %>%
+  arrange(desc(Sold)) %>%
+  ungroup()
+
+W1_sold
+
+
+#Uke 1 høyest profitt per item
+W1_Profit <- w1_store2 %>%
+  group_by(INV_NUMBER, Description, Price, Sold, Cost, Profit, Sales) %>%
+  summarise(Profit = sum(Profit)) %>%
+  arrange(desc(Profit)) %>%
+  ungroup()
+
+W1_Profit
+
+#Uke 1 minst profitt per item
+W1_leastprofit <- w1_store2 %>%
+  group_by(INV_NUMBER, Description, Price, Sold, Cost, Profit, Sales) %>%
+  summarise(Profit = sum(Profit)) %>%
+  filter(Price >= 1) %>%
+  arrange(Profit) %>%
+  ungroup()
+
+W1_leastprofit
+
+
+
+#Uke 2 mest solgt per item
+ W2_sold <- w2_store2 %>%
+  group_by(INV_NUMBER, Description, Price, Sold, Cost, Profit, Sales) %>%
+  summarise(Sold = sum(Sold)) %>%
+  arrange(desc(Sold)) %>%
+  ungroup()
+
+W2_sold
+
+
+#Uke 2 høyest profitt per item
+W2_Profit <- w2_store2 %>%
+  group_by(INV_NUMBER, Description, Price, Sold, Cost, Profit, Sales) %>%
+  summarise(Profit = sum(Profit)) %>%
+  arrange(desc(Profit)) %>%
+  ungroup()
+
+W2_Profit
+
+
+
+
+#Uke 2 lavest profitt per item
+W2_leastprofit <- w2_store2 %>%
+  group_by(INV_NUMBER, Description, Price, Sold, Cost, Profit, Sales) %>%
+  summarise(Profit = sum(Profit)) %>%
+  arrange(Profit) %>%
+  ungroup()
+
+W2_leastprofit
+
+#Sorterer varer til prisgrupper
+per_item <- w1_store2 %>% 
+  group_by(Price_per_item = ifelse(Price <= 1.0, "<1$", 
+                                   ifelse(Price > 1 & Price <= 2, "1$", 
+                                   ifelse(Price > 2 & Price <= 3, "2$", 
+                                   ifelse(Price > 3 & Price <= 4, "3$", 
+                                   ifelse(Price > 4 & Price <= 5, "4$", 
+                                   ifelse(Price > 5 & Price <= 6, "5$", 
+                                   ifelse(Price > 6 & Price <= 7, "6$", 
+                                   ifelse(Price > 7 & Price <= 8.0, "7$", ">8$"))))))))) %>% 
+  summarise(Sold, Price, Sales, Profit)
+
+
+#Figur 1 - Plotter salg per prisgruppe 
+figure_1 <-
+  per_item %>% 
+  ggplot(aes(x=Price_per_item, y = Sold))+
+  geom_bar(stat= "identity", fill = "blue") +
+  geom_text(aes(label=Profit), vjust= 100, size=3)+
+  labs(title = "Salgsoversikt per prisgruppe, 7 dager", x = "Prisgruppe solgt $", y = "Antall solgt")+
+  theme_bw()
+figure_1
+
+
+
+
+###Oppgave 3
+
+#Filtrerer alle butikkene for en mnd
+
+all_stores_month <- Complete_tabel %>%
+  select("Store_Name", "Store_Num", "INV_NUMBER","Description", "Price","Sales",
+         "Profit", "Sold", "Store_Drive_Through", "Month",
+         "Day") %>%
+  filter(Month == "5")
+
+
+#Finner hvilke butikk som har solgt mest enheter
+
+Aggregert_nivå_salg <- all_stores_month %>%
+  select("INV_NUMBER", "Description", "Price", "Sold", "Profit",
+         "Sales", "Month", "Store_Num", "Store_Name") %>%
+  group_by(Store_Name, Store_Num) %>%
+  summarise(sold = sum(Sold)) %>%
+  ungroup()
+
+Aggregert_nivå_salg
+
+
+#Oversikt over hvem som har mest i profitt
+Aggregert_nivå_profit <- all_stores_month %>%
+  select("INV_NUMBER", "Description", "Price", "Sold", "Profit",
+         "Sales", "Month", "Store_Num", "Store_Name") %>%
+  group_by(Store_Name, Store_Num) %>%
+  summarise(Profit = sum(Profit))%>%
+  arrange(desc(Profit)) %>%
+  ungroup()
+
+Aggregert_nivå_profit
+
+##Oversikt over hvilke produkt som selger mest
+Aggregert_nivå_mest_solgt <- all_stores_month %>%
+  select("INV_NUMBER", "Description", "Price", "Sold", "Profit",
+         "Sales", "Month", "Store_Num", "Store_Name") %>%
+  group_by( Description) %>%
+  summarise(Sold = sum(Sold))%>%
+  arrange(desc(Sold))%>%
+  ungroup()
+
+Aggregert_nivå_mest_solgt
+
+
+
+#Sorterer varer til prisgrupper
+
+Price_per_items <- all_stores_month %>% 
+  group_by(Price_per_items = ifelse(Price <= 1.0, "<1$", 
+                             ifelse(Price > 1 & Price <= 2, "1-2$", 
+                             ifelse(Price > 2 & Price <= 4, "2-4$", 
+                             ifelse(Price > 4 & Price <= 6, "4-6$", 
+                             ifelse(Price > 6 & Price <= 8, "6-8$", 
+                             ifelse(Price > 8 & Price <= 10, "8-10$", 
+                             ifelse(Price > 10, ">10$", "")))))))) %>% 
+  summarise(Sold, Price, Sales, Profit)
+Price_per_items
